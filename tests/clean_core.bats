@@ -45,6 +45,15 @@ setup() {
     [ -f "$HOME/Library/Caches/TestApp/cache.tmp" ]
 }
 
+@test "mo clean --dry-run --trash runs without deleting" {
+    mkdir -p "$HOME/Library/Caches/TrashTestApp"
+    echo "trash test" > "$HOME/Library/Caches/TrashTestApp/cache.tmp"
+
+    run env HOME="$HOME" MOLE_TEST_MODE=1 "$PROJECT_ROOT/mole" clean --dry-run --trash
+    [ "$status" -eq 0 ]
+    [ -f "$HOME/Library/Caches/TrashTestApp/cache.tmp" ]
+}
+
 @test "mo clean honors whitelist entries" {
     mkdir -p "$HOME/Library/Caches/WhitelistedApp"
     echo "keep me" > "$HOME/Library/Caches/WhitelistedApp/data.tmp"

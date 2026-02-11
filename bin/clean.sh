@@ -22,6 +22,7 @@ source "$SCRIPT_DIR/../lib/clean/user.sh"
 
 SYSTEM_CLEAN=false
 DRY_RUN=false
+USE_TRASH=false
 PROTECT_FINDER_METADATA=false
 IS_M_SERIES=$([[ "$(uname -m)" == "arm64" ]] && echo "true" || echo "false")
 
@@ -705,7 +706,7 @@ start_cleanup() {
     echo ""
 
     if [[ "$DRY_RUN" != "true" && -t 0 ]]; then
-        echo -e "${GRAY}${ICON_WARNING} Use --dry-run to preview, --whitelist to manage protected paths${NC}"
+        echo -e "${GRAY}${ICON_WARNING} Use --dry-run to preview, --trash to move to Trash, --whitelist to manage protected paths${NC}"
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -1088,6 +1089,10 @@ main() {
             "--dry-run" | "-n")
                 DRY_RUN=true
                 export MOLE_DRY_RUN=1
+                ;;
+            "--trash" | "-t")
+                USE_TRASH=true
+                export MOLE_USE_TRASH=1
                 ;;
             "--whitelist")
                 source "$SCRIPT_DIR/../lib/manage/whitelist.sh"

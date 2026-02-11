@@ -179,7 +179,34 @@ validate_path_for_deletion() {
 # Safe Removal Operations
 # ============================================================================
 
+# Move path to Trash using macOS Finder (user-level paths only).
+# Returns 0 on success, 1 on failure. No-op on non-macOS; callers should fall back to rm.
+safe_move_to_trash() {
+    local path="$1"
+
+    [[ -z "$path" || ! -e "$path" ]] && return 1
+    [[ "$(uname -s 2> /dev/null)" != "Darwin" ]] && return 1
+    if ! command -v osascript > /dev/null 2>&1; then
+        return 1
+    fi
+
+    local abs_path
+    abs_path=$(cd "$(dirname "$path")" 2> /dev/null && pwd)/$(basename "$path") || echo "$path"
+    [[ "$abs_path" != /* ]] && return 1
+
+    # Escape for AppleScript: backslash and double-quote
+    local escaped="${abs_path//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+
+    osascript -e "tell application \"Finder\" to delete POSIX file \"$escaped\"" 2> /dev/null || {
+        debug_log "Trash failed: $path"
+        return 1
+    }
+    return 0
+}
+
 # Safe wrapper around rm -rf with validation
+# When MOLE_USE_TRASH=1 (e.g. mo clean --trash), moves to Trash on macOS instead of permanent delete.
 safe_remove() {
     local path="$1"
     local silent="${2:-false}"
@@ -203,6 +230,8 @@ safe_remove() {
 
             local file_size=""
             local file_age=""
+            local action_label="Would remove"
+            [[ "${MOLE_USE_TRASH:-0}" == "1" ]] && action_label="Would move to Trash"
 
             if [[ -e "$path" ]]; then
                 local size_kb
@@ -222,14 +251,16 @@ safe_remove() {
                 fi
             fi
 
-            debug_file_action "[DRY RUN] Would remove" "$path" "$file_size" "$file_age"
+            debug_file_action "[DRY RUN] $action_label" "$path" "$file_size" "$file_age"
         else
-            debug_log "[DRY RUN] Would remove: $path"
+            if [[ "${MOLE_USE_TRASH:-0}" == "1" ]]; then
+                debug_log "[DRY RUN] Would move to Trash: $path"
+            else
+                debug_log "[DRY RUN] Would remove: $path"
+            fi
         fi
         return 0
     fi
-
-    debug_log "Removing: $path"
 
     # Calculate size before deletion for logging
     local size_kb=0
@@ -242,6 +273,19 @@ safe_remove() {
             fi
         fi
     fi
+
+    # Prefer Trash when MOLE_USE_TRASH=1 (e.g. mo clean --trash)
+    if [[ "${MOLE_USE_TRASH:-0}" == "1" ]]; then
+        if safe_move_to_trash "$path"; then
+            debug_log "Moved to Trash: $path"
+            log_operation "${MOLE_CURRENT_COMMAND:-clean}" "TRASHED" "$path" "$size_human"
+            return 0
+        fi
+        # Fall back to permanent removal if trash failed (e.g. headless, permission)
+        debug_log "Trash failed for $path, falling back to remove"
+    fi
+
+    debug_log "Removing: $path"
 
     # Perform the deletion
     # Use || to capture the exit code so set -e won't abort on rm failures

@@ -7,6 +7,7 @@ show_clean_help() {
     echo ""
     echo "Options:"
     echo "  --dry-run, -n     Preview cleanup without making changes"
+    echo "  --trash, -t       Move cleaned files to Trash instead of permanently removing (macOS)"
     echo "  --whitelist       Manage protected paths"
     echo "  --debug           Show detailed operation logs"
     echo "  -h, --help        Show this help message"

@@ -115,6 +115,14 @@ teardown() {
     [ "$status" -eq 1 ]
 }
 
+@test "safe_remove with MOLE_USE_TRASH=1 removes file (trash or fallback)" {
+    local test_file="$TEST_DIR/trash_test.txt"
+    echo "trash test" > "$test_file"
+
+    run bash -c "source '$PROJECT_ROOT/lib/core/common.sh'; MOLE_USE_TRASH=1 safe_remove '$test_file' true"
+    [ "$status" -eq 0 ]
+    [ ! -f "$test_file" ]
+}
 
 @test "safe_find_delete validates base directory" {
     run bash -c "source '$PROJECT_ROOT/lib/core/common.sh'; safe_find_delete '/nonexistent' '*.tmp' 7 'f' 2>&1"

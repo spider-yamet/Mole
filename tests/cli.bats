@@ -56,6 +56,13 @@ setup() {
     [[ "$output" == *"mo analyze"* ]]
 }
 
+@test "mo clean --help shows --trash option" {
+    run env HOME="$HOME" "$PROJECT_ROOT/mole" clean --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"--trash"* ]]
+    [[ "$output" == *"Trash"* ]]
+}
+
 @test "mole --version reports script version" {
     expected_version="$(grep '^VERSION=' "$PROJECT_ROOT/mole" | head -1 | sed 's/VERSION=\"\(.*\)\"/\1/')"
     run env HOME="$HOME" "$PROJECT_ROOT/mole" --version
