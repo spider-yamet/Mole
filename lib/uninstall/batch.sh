@@ -262,7 +262,10 @@ batch_uninstall_applications() {
         local related_files=$(find_app_files "$bundle_id" "$app_name" || true)
         local diag_user
         diag_user=$(get_diagnostic_report_paths_for_app "$app_path" "$app_name" "$HOME/Library/Logs/DiagnosticReports" || true)
-        [[ -n "$diag_user" ]] && related_files=$([[ -n "$related_files" ]] && echo "$related_files"; echo "$diag_user")
+        [[ -n "$diag_user" ]] && related_files=$(
+            [[ -n "$related_files" ]] && echo "$related_files"
+            echo "$diag_user"
+        )
         local related_size_kb=$(calculate_total_size "$related_files" || echo "0")
         # system_files is a newline-separated string, not an array.
         # shellcheck disable=SC2178,SC2128
@@ -272,8 +275,7 @@ batch_uninstall_applications() {
         # shellcheck disable=SC2128
         local system_size_kb=$(calculate_total_size "$system_files" || echo "0")
         local diag_system_size_kb=$(calculate_total_size "$diag_system" || echo "0")
-        local diag_user_size_kb=$(calculate_total_size "$diag_user" || echo "0")
-        local total_kb=$((app_size_kb + related_size_kb + system_size_kb + diag_system_size_kb + diag_user_size_kb))
+        local total_kb=$((app_size_kb + related_size_kb + system_size_kb + diag_system_size_kb))
         ((total_estimated_size += total_kb)) || true
 
         # shellcheck disable=SC2128
@@ -333,7 +335,10 @@ batch_uninstall_applications() {
         local system_files=$(decode_file_list "$encoded_system_files" "$app_name")
         local diag_system_display
         diag_system_display=$(decode_file_list "$encoded_diag_system" "$app_name")
-        [[ -n "$diag_system_display" ]] && system_files=$([[ -n "$system_files" ]] && echo "$system_files"; echo "$diag_system_display")
+        [[ -n "$diag_system_display" ]] && system_files=$(
+            [[ -n "$system_files" ]] && echo "$system_files"
+            echo "$diag_system_display"
+        )
 
         echo -e "  ${GREEN}${ICON_SUCCESS}${NC} ${app_path/$HOME/~}"
 
@@ -541,8 +546,13 @@ batch_uninstall_applications() {
             if [[ "$used_brew_successfully" == "true" ]]; then
                 remove_file_list "$diag_system" "true" > /dev/null
             else
-                local system_all
-                system_all=$([[ -n "$system_files" ]] && echo "$system_files"; [[ -n "$diag_system" ]] && echo "$diag_system")
+                local system_all="$system_files"
+                if [[ -n "$diag_system" ]]; then
+                    if [[ -n "$system_all" ]]; then
+                        system_all+=$'\n'
+                    fi
+                    system_all+="$diag_system"
+                fi
                 remove_file_list "$system_all" "true" > /dev/null
             fi
 
